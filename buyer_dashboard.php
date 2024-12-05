@@ -1,7 +1,7 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-require_once 'config.php'; // Add this line first
+require_once 'config.php';
 require_once 'auth_middleware.php';
 checkAuth();
 checkUserType(['buyer']);

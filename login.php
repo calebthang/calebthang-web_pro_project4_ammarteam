@@ -149,9 +149,9 @@ session_start();
 // Database connection
 function connectDB() {
     $host = 'localhost';
-    $dbname = 'web_pro_project4_ammarteam;';
-    $username = 'root';
-    $password = '';
+    $dbname = 'kle53;';
+    $username = 'kle53';
+    $password = 'kle53';
 
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
