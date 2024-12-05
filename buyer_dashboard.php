@@ -252,18 +252,39 @@ $wishlistItems = $wishlistStmt->fetchAll();
     }
 
     function loadProperties(tab) {
-        const searchTerm = document.querySelector('.search-input').value;
-        const propertyType = document.getElementById('propertyType').value;
-        const priceRange = document.getElementById('priceRange').value;
-        const bedrooms = document.getElementById('bedrooms').value;
+    const searchTerm = document.querySelector('.search-input').value;
+    const propertyType = document.getElementById('propertyType').value;
+    const priceRange = document.getElementById('priceRange').value;
+    const bedrooms = document.getElementById('bedrooms').value;
 
-        fetch(`get_properties.php?tab=${tab}&search=${searchTerm}&type=${propertyType}&price=${priceRange}&beds=${bedrooms}`)
-            .then(response => response.json())
-            .then(data => {
-                const grid = document.getElementById('propertyGrid');
+    fetch(`get_properties.php?tab=${tab}&search=${searchTerm}&type=${propertyType}&price=${priceRange}&beds=${bedrooms}`)
+        .then(response => response.json())
+        .then(data => {
+            const grid = document.getElementById('propertyGrid');
+            if (data.length === 0 && tab === 'wishlist') {
+                grid.innerHTML = `
+                    <div style="text-align: center; grid-column: 1/-1; padding: 2rem;">
+                        <i class="fas fa-heart" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+                        <h3>Your wishlist is empty</h3>
+                        <p>Properties you save will appear here</p>
+                    </div>
+                `;
+            } else if (data.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; grid-column: 1/-1; padding: 2rem;">
+                        <i class="fas fa-search" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+                        <h3>No properties found</h3>
+                        <p>Try adjusting your search filters</p>
+                    </div>
+                `;
+            } else {
                 grid.innerHTML = data.map(property => createPropertyCard(property)).join('');
-            });
-    }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
 
     function createPropertyCard(property) {
         return `

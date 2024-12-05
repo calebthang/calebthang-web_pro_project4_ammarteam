@@ -5,78 +5,70 @@ require_once 'config.php';
 header('Content-Type: application/json');
 
 try {
-   $pdo = connectDB();
-   error_log("Database connected");
+    $pdo = connectDB();
+    
+    $tab = $_GET['tab'] ?? 'all';
+    $search = $_GET['search'] ?? '';
+    $type = $_GET['type'] ?? '';
+    $price = $_GET['price'] ?? '';
+    $beds = $_GET['beds'] ?? '';
 
-   $tab = $_GET['tab'] ?? 'all';
-   $search = $_GET['search'] ?? '';
-   $type = $_GET['type'] ?? '';
-   $price = $_GET['price'] ?? '';
-   $beds = $_GET['beds'] ?? '';
+    $params = [];
+    $whereConditions = [];
 
-   $params = [];
-   $whereConditions = [];
+    // Base query
+    if ($tab === 'wishlist') {
+        // Only get properties in user's wishlist
+        $sql = "SELECT p.* FROM properties p 
+                INNER JOIN wishlists w ON p.id = w.property_id 
+                WHERE w.user_id = ?";
+        $params[] = $_SESSION['user_id'];
+    } else {
+        // Get all properties
+        $sql = "SELECT * FROM properties WHERE 1=1";
+    }
 
-   if ($search) {
-       $whereConditions[] = "(location LIKE ? OR title LIKE ? OR description LIKE ?)";
-       $params[] = "%$search%";
-       $params[] = "%$search%";
-       $params[] = "%$search%";
-   }
+    // Add search conditions
+    if ($search) {
+        $sql .= " AND (location LIKE ? OR title LIKE ? OR description LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
 
-   if ($type) {
-       $whereConditions[] = "property_type = ?";
-       $params[] = $type;
-   }
+    if ($type) {
+        $sql .= " AND property_type = ?";
+        $params[] = $type;
+    }
 
-   if ($price) {
-       list($min, $max) = explode('-', $price);
-       if ($max) {
-           $whereConditions[] = "price BETWEEN ? AND ?";
-           $params[] = $min;
-           $params[] = $max;
-       } else {
-           $whereConditions[] = "price >= ?";
-           $params[] = $min;
-       }
-   }
+    if ($price) {
+        list($min, $max) = explode('-', $price);
+        if ($max) {
+            $sql .= " AND price BETWEEN ? AND ?";
+            $params[] = $min;
+            $params[] = $max;
+        } else {
+            $sql .= " AND price >= ?";
+            $params[] = $min;
+        }
+    }
 
-   if ($beds) {
-       $whereConditions[] = "bedrooms >= ?";
-       $params[] = $beds;
-   }
+    if ($beds) {
+        $sql .= " AND bedrooms >= ?";
+        $params[] = $beds;
+    }
 
-   $whereClause = $whereConditions ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $properties = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-   if ($tab === 'wishlist') {
-       $sql = "SELECT DISTINCT p.* FROM properties p 
-               INNER JOIN wishlists w ON p.id = w.property_id 
-               WHERE w.user_id = ?";
-       if (!empty($whereConditions)) {
-           $sql .= " AND " . implode(' AND ', $whereConditions);
-       }
-       $params = array_merge([$_SESSION['user_id']], $params);
-       $stmt = $pdo->prepare($sql);
-       $stmt->execute($params);
-   } else {
-       $sql = "SELECT * FROM properties $whereClause";
-       $stmt = $pdo->prepare($sql);
-       $stmt->execute($params);
-   }
+    echo json_encode($properties);
 
-   error_log("SQL Query: " . $sql);
-   error_log("Parameters: " . json_encode($params));
-
-   $properties = $stmt->fetchAll(PDO::FETCH_ASSOC);
-   error_log("Found " . count($properties) . " properties");
-   error_log("Properties data: " . json_encode($properties));
-
-   echo json_encode($properties);
 } catch(PDOException $e) {
-   error_log("Database error: " . $e->getMessage());
-   echo json_encode(['error' => $e->getMessage()]);
+    error_log("Database error: " . $e->getMessage());
+    echo json_encode(['error' => 'Database error']);
 } catch(Exception $e) {
-   error_log("General error: " . $e->getMessage());
-   echo json_encode(['error' => $e->getMessage()]);
+    error_log("General error: " . $e->getMessage());
+    echo json_encode(['error' => 'General error']);
 }
 ?>
