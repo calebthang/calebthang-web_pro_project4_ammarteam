@@ -244,23 +244,28 @@ $wishlistItems = $wishlistStmt->fetchAll();
 
     let currentTab = 'all';
 
-    function showTab(tab) {
-        currentTab = tab;
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        event.target.classList.add('active');
-        loadProperties(tab);
-    }
+function showTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    console.log('Switching to tab:', tab); // Debug log
+    loadProperties(tab);
+}
 
-    function loadProperties(tab) {
+function loadProperties(tab) {
     const searchTerm = document.querySelector('.search-input').value;
     const propertyType = document.getElementById('propertyType').value;
     const priceRange = document.getElementById('priceRange').value;
     const bedrooms = document.getElementById('bedrooms').value;
 
+    console.log('Loading properties for tab:', tab); // Debug log
+
     fetch(`get_properties.php?tab=${tab}&search=${searchTerm}&type=${propertyType}&price=${priceRange}&beds=${bedrooms}`)
         .then(response => response.json())
         .then(data => {
+            console.log('Received data:', data); // Debug log
             const grid = document.getElementById('propertyGrid');
+            
             if (data.length === 0 && tab === 'wishlist') {
                 grid.innerHTML = `
                     <div style="text-align: center; grid-column: 1/-1; padding: 2rem;">
@@ -281,56 +286,58 @@ $wishlistItems = $wishlistStmt->fetchAll();
                 grid.innerHTML = data.map(property => createPropertyCard(property)).join('');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+        .catch(error => console.error('Error:', error));
 }
 
-    function createPropertyCard(property) {
-        return `
-            <div class="property-card">
-                <img src="${property.image_url}" class="property-image" alt="${property.title}">
-                <div class="property-info">
-                    <div class="property-price">$${property.price.toLocaleString()}</div>
-                    <div class="property-details">
-                        <span>${property.bedrooms} beds</span>
-                        <span>${property.bathrooms} baths</span>
-                        <span>${property.square_feet} sq ft</span>
-                    </div>
-                    <div class="property-location">
-                        <i class="fas fa-map-marker-alt"></i>
-                        ${property.location}
-                    </div>
+function createPropertyCard(property) {
+    const isWishlisted = property.isWishlisted; // We'll need to add this in get_properties.php
+    return `
+        <div class="property-card">
+            <img src="${property.image_url}" class="property-image" alt="${property.title}">
+            <div class="property-info">
+                <div class="property-price">$${property.price.toLocaleString()}</div>
+                <div class="property-details">
+                    <span>${property.bedrooms} beds</span>
+                    <span>${property.bathrooms} baths</span>
+                    <span>${property.square_feet} sq ft</span>
                 </div>
-                <div class="card-actions">
-                    <button class="wishlist-btn" onclick="toggleWishlist(${property.id})">
-                        <i class="fas fa-heart"></i>
-                        Add to Wishlist
-                    </button>
-                    <a href="property_details.php?id=${property.id}" class="btn">View Details</a>
+                <div class="property-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    ${property.location}
                 </div>
             </div>
-        `;
-    }
+            <div class="card-actions">
+                <button class="wishlist-btn" onclick="toggleWishlist(${property.id}, this)">
+                    <i class="fas fa-heart ${isWishlisted ? 'text-red-500' : ''}"></i>
+                    ${isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                </button>
+                <a href="property_details.php?id=${property.id}" class="btn">View Details</a>
+            </div>
+        </div>
+    `;
+}
 
-    function toggleWishlist(propertyId) {
-        fetch('toggle_wishlist.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                property_id: propertyId
-            })
+function toggleWishlist(propertyId, button) {
+    fetch('toggle_wishlist.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            property_id: propertyId
         })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                // Update wishlist icon
-                loadProperties(currentTab);
-            }
-        });
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            // Reload the current tab to update the view
+            loadProperties(currentTab);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
 
     function debounce(func, wait) {
         let timeout;
